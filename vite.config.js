@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Replace 'buhroo-interiors' with your exact GitHub repository name
+// base must match your repository name exactly with slashes on both sides
 export default defineConfig({
   plugins: [react()],
-  base: '/buhroo-interiors/', 
+  base: '/buhroo-interiors/',
 })
