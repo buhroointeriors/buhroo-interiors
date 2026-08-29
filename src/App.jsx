@@ -20,10 +20,8 @@ const CATEGORIES = [
   'Luxury Wallpapers'
 ];
 
-// DEFAULT PLACEHOLDER FOR BROKEN LINKS
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80';
 
-// HELPER: Convert Google Drive share links to raw direct image URLs
 const formatImageUrl = (url) => {
   if (!url) return PLACEHOLDER_IMAGE;
   const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -273,7 +271,7 @@ function App() {
       
       {/* CUSTOM FLOATING TOAST NOTIFICATION */}
       {toast && (
-        <div className={`fixed top-4 left-4 right-4 md:left-auto md:right-6 z-50 px-5 py-3 rounded-xl shadow-2xl flex items-center justify-between md:justify-start space-x-3 text-xs md:text-sm font-bold text-white transition-all transform animate-bounce ${
+        <div className={`fixed top-4 left-4 right-4 md:left-auto md:right-6 z-[70] px-5 py-3 rounded-xl shadow-2xl flex items-center justify-between md:justify-start space-x-3 text-xs md:text-sm font-bold text-white transition-all transform animate-bounce ${
           toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'
         }`}>
           <div className="flex items-center space-x-2">
@@ -286,7 +284,7 @@ function App() {
 
       {/* SUCCESS CONFIRMATION MODAL POPUP */}
       {bookingSuccessModal && (
-        <div className="fixed inset-0 bg-teal-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-teal-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4 border border-gray-100 relative">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 text-3xl rounded-full flex items-center justify-center mx-auto shadow-inner">
               ✓
@@ -321,7 +319,7 @@ function App() {
 
       {/* CUSTOM CONFIRM DELETE MODAL */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4 border border-gray-100">
             <div className="text-4xl">🗑️</div>
             <h3 className="text-lg font-bold text-teal-950">Confirm Deletion</h3>
@@ -472,10 +470,10 @@ function App() {
         )}
       </nav>
 
-      {/* CUSTOMER PROMPT MODAL FOR BOOKING TECHNICIAN VISIT */}
+      {/* CUSTOMER PROMPT MODAL FOR BOOKING TECHNICIAN VISIT (OVERLAP FIXED WITH z-[60] AND pb-24) */}
       {showBookingModal && (
-        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto border border-gray-100">
+        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-24 md:pb-6 border border-gray-100">
             <button onClick={() => setShowBookingModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 text-lg transition">✕</button>
             
             <div className="flex items-center space-x-2 text-amber-600 font-black text-[10px] uppercase tracking-wider">
@@ -538,7 +536,7 @@ function App() {
 
       {/* ADMIN LOGIN MODAL */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative border border-gray-100">
             <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 transition">✕</button>
             <h3 className="text-xl md:text-2xl font-black text-teal-950">Admin Access</h3>
@@ -1043,7 +1041,7 @@ function App() {
 
       {/* POPUP MODAL FOR PRODUCT DETAILS */}
       {activeModalProduct && (
-        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl relative border border-gray-100">
             <button onClick={() => setActiveModalProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 transition">✕</button>
             <h3 className="text-xl md:text-2xl font-black text-teal-950 mt-1">{activeModalProduct.name}</h3>
