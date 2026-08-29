@@ -20,6 +20,19 @@ const CATEGORIES = [
   'Luxury Wallpapers'
 ];
 
+// DEFAULT PLACEHOLDER FOR BROKEN LINKS
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80';
+
+// HELPER: Convert Google Drive share links to raw direct image URLs
+const formatImageUrl = (url) => {
+  if (!url) return PLACEHOLDER_IMAGE;
+  const driveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+  }
+  return url.trim();
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -144,7 +157,6 @@ function App() {
 
     window.location.href = `mailto:${businessEmail}?subject=${emailSubject}&body=${emailBody}`;
 
-    // SHOW POPUP CONFIRMATION MODAL TO USER
     setBookingSuccessModal({
       name: bookingForm.name,
       location: bookingForm.location
@@ -159,12 +171,14 @@ function App() {
     e.preventDefault();
     setUploadingProduct(true);
 
+    const cleanImgUrl = formatImageUrl(newProduct.image);
+
     const { error } = await supabase.from('products').insert([
       {
         name: newProduct.name,
         category: newProduct.category,
         finish: newProduct.finish,
-        image: newProduct.image || 'https://via.placeholder.com/600x400?text=Buhroo+Interiors',
+        image: cleanImgUrl,
         description: newProduct.description
       }
     ]);
@@ -974,6 +988,7 @@ function App() {
                           <img
                             src={product.image}
                             alt={product.name}
+                            onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                           <span className="absolute top-3 left-3 bg-teal-950/90 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full tracking-wider shadow-sm">
@@ -1032,7 +1047,7 @@ function App() {
           <div className="bg-white rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl relative border border-gray-100">
             <button onClick={() => setActiveModalProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 transition">✕</button>
             <h3 className="text-xl md:text-2xl font-black text-teal-950 mt-1">{activeModalProduct.name}</h3>
-            <img src={activeModalProduct.image} alt={activeModalProduct.name} className="w-full h-48 md:h-52 object-cover rounded-2xl mt-3 md:mt-4 shadow-sm" />
+            <img src={activeModalProduct.image} alt={activeModalProduct.name} onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }} className="w-full h-48 md:h-52 object-cover rounded-2xl mt-3 md:mt-4 shadow-sm" />
             <p className="text-xs text-gray-600 mt-3 md:mt-4 leading-relaxed">{activeModalProduct.description}</p>
             <div className="mt-5">
               <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello Buhroo Interiors, I am interested in ${activeModalProduct.name}. Please share pricing.`)}`} target="_blank" rel="noreferrer" className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl text-center shadow-md transition">
