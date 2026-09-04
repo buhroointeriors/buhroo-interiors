@@ -2,9 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
-// Dynamic Asset Imports for GitHub Pages
 import chinarLeaf from '/chinar-leaf.png';
-import heroBg from '/wgbh1.jpg';
 
 const CATEGORIES = [
   'All', 
@@ -20,6 +18,7 @@ const CATEGORIES = [
   'Luxury Wallpapers'
 ];
 
+const ITEMS_PER_PAGE = 8;
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80';
 
 const formatImageUrl = (url) => {
@@ -31,28 +30,22 @@ const formatImageUrl = (url) => {
   return url.trim();
 };
 
-function App() {
+export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [catCurrentPage, setCatCurrentPage] = useState(1);
   const [products, setProducts] = useState([]);
   const [catalogues, setCatalogues] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeModalProduct, setActiveModalProduct] = useState(null);
   
-  // Mobile Menu Drawer State
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   // Custom Toast Notification State
   const [toast, setToast] = useState(null); 
 
-  // SUCCESS POPUP MODAL STATE FOR BOOKINGS
+  // Booking Modal & Success States
   const [bookingSuccessModal, setBookingSuccessModal] = useState(null);
-
-  // Custom Delete Modal State
-  const [deleteConfirm, setDeleteConfirm] = useState(null); 
-
-  // Booking Modal State
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     name: '',
@@ -64,20 +57,19 @@ function App() {
   });
   const [submittingBooking, setSubmittingBooking] = useState(false);
 
-  // Security State
+  // Admin & Delete States
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginCreds, setLoginCreds] = useState({ username: '', password: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // Form 1 State: New Showcase Product Card
-  const [newProduct, setNewProduct] = useState({
-    name: '', category: 'Laminated Wall Panels', finish: '', image: '', description: ''
-  });
+  // Admin Search Filters
+  const [adminProdSearch, setAdminProdSearch] = useState('');
+  const [adminCatSearch, setAdminCatSearch] = useState('');
 
-  // Form 2 State: New Standalone PDF Catalogue
-  const [newCatalogue, setNewCatalogue] = useState({
-    title: '', category: 'Laminated Wall Panels'
-  });
+  // Admin Forms State
+  const [newProduct, setNewProduct] = useState({ name: '', category: 'Laminated Wall Panels', finish: '', image: '', description: '' });
+  const [newCatalogue, setNewCatalogue] = useState({ title: '', category: 'Laminated Wall Panels' });
   const [pdfFile, setPdfFile] = useState(null);
   const [uploadingProduct, setUploadingProduct] = useState(false);
   const [uploadingCatalogue, setUploadingCatalogue] = useState(false);
@@ -106,6 +98,7 @@ function App() {
 
   useEffect(() => {
     fetchData();
+    document.body.classList.add('js', 'is-ready', 'intro-done');
   }, []);
 
   const handleLogin = (e) => {
@@ -155,11 +148,7 @@ function App() {
 
     window.location.href = `mailto:${businessEmail}?subject=${emailSubject}&body=${emailBody}`;
 
-    setBookingSuccessModal({
-      name: bookingForm.name,
-      location: bookingForm.location
-    });
-
+    setBookingSuccessModal({ name: bookingForm.name, location: bookingForm.location });
     setShowBookingModal(false);
     setBookingForm({ name: '', phone: '', location: 'Srinagar', address: '', serviceType: 'On-Site Measurement Visit', notes: '' });
     fetchData();
@@ -168,7 +157,6 @@ function App() {
   const handleAddProduct = async (e) => {
     e.preventDefault();
     setUploadingProduct(true);
-
     const cleanImgUrl = formatImageUrl(newProduct.image);
 
     const { error } = await supabase.from('products').insert([
@@ -200,13 +188,9 @@ function App() {
     }
 
     setUploadingCatalogue(true);
-
-    const sanitizedName = pdfFile.name
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9.-]/g, '_');
-
+    const sanitizedName = pdfFile.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_');
     const cleanFileName = `${Date.now()}_${sanitizedName}`;
+
     const { error: storageError } = await supabase.storage.from('catalogues').upload(cleanFileName, pdfFile);
 
     if (storageError) {
@@ -257,817 +241,663 @@ function App() {
     fetchData();
   };
 
-  const navigateTab = (tab) => {
-    setActiveTab(tab);
-    setIsMobileMenuOpen(false);
-  };
-
   const filteredProducts = selectedCategory === 'All' 
     ? products 
     : products.filter(p => p.category === selectedCategory);
 
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const catTotalPages = Math.ceil(catalogues.length / ITEMS_PER_PAGE);
+  const catStartIndex = (catCurrentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedCatalogues = catalogues.slice(catStartIndex, catStartIndex + ITEMS_PER_PAGE);
+
+  const filteredAdminProducts = products.filter(p => p.name.toLowerCase().includes(adminProdSearch.toLowerCase()) || p.category.toLowerCase().includes(adminProdSearch.toLowerCase()));
+  const filteredAdminCatalogues = catalogues.filter(c => c.title.toLowerCase().includes(adminCatSearch.toLowerCase()) || c.category.toLowerCase().includes(adminCatSearch.toLowerCase()));
+
+  const handleCategoryChange = (cat) => {
+    setSelectedCategory(cat);
+    setCurrentPage(1);
+  };
+
+  const scrollToTopGrid = () => {
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-gray-800 pb-20 md:pb-0 relative flex flex-col justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-[#23261f] via-[#383b34] to-[#23261f] font-['Lexend',sans-serif] text-white selection:bg-[#eef1e7] selection:text-[#23261f] overflow-x-hidden flex flex-col justify-between relative">
       
-      <div>
-        {/* CUSTOM FLOATING TOAST NOTIFICATION */}
-        {toast && (
-          <div className={`fixed top-4 left-4 right-4 md:left-auto md:right-6 z-[70] px-5 py-3 rounded-xl shadow-2xl flex items-center justify-between md:justify-start space-x-3 text-xs md:text-sm font-bold text-white transition-all transform animate-bounce ${
-            toast.type === 'error' ? 'bg-rose-600' : 'bg-emerald-600'
-          }`}>
-            <div className="flex items-center space-x-2">
-              <span>{toast.type === 'error' ? '⚠️' : '✅'}</span>
-              <span>{toast.message}</span>
+      {/* GLOBAL STYLES */}
+      <style>{`
+        .sylva-dock {
+          background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 42%), rgba(34,40,31,.92);
+          box-shadow: 0 10px 30px rgba(10,14,8,.50), inset 0 1px rgba(255,255,255,.10);
+          border: 1px solid rgba(255,255,255,.14);
+        }
+        
+        .sylva-card {
+          background: #f2f3ef; color: #23261f;
+          box-shadow: 0 20px 50px rgba(16,21,13,.35);
+          border-radius: 28px;
+        }
+        .sylva-dark-card {
+          background: #2b2e27; border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        #scene { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 8px; }
+      `}</style>
+
+      {/* FLOATING TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center space-x-2 text-xs font-medium transition-all ${toast.type === 'error' ? 'bg-red-900/90 text-white' : 'bg-[#eef1e7] text-[#23261f]'}`}>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* TOP HEADER BAR */}
+      <div className="bg-[#2b2e27] border-b border-white/5 h-8 px-3 md:px-8 text-[10px] sm:text-xs text-white/70 flex justify-between items-center z-50">
+        <div className="flex items-center space-x-1.5 truncate">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0"></span>
+          <span className="truncate">Srinagar & Baramulla</span>
+        </div>
+        <div className="flex items-center space-x-3 shrink-0">
+          <a href={`tel:${businessPhone}`} className="hover:text-amber-400 transition font-medium">📞 <span className="hidden sm:inline">{businessPhone}</span></a>
+          {isAdminLoggedIn ? (
+            <button onClick={() => setIsAdminLoggedIn(false)} className="bg-rose-600 text-white px-2 py-0.5 rounded text-[9px] font-bold">Log Out</button>
+          ) : (
+            <button onClick={() => setShowLoginModal(true)} className="text-amber-400 font-bold hover:underline">🔐 Admin</button>
+          )}
+        </div>
+      </div>
+
+      {/* PUBLIC FLOATING DOCK */}
+      {!isAdminLoggedIn && (
+        <div className="fixed top-10 sm:top-12 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
+          <nav className="sylva-dock pointer-events-auto flex items-center justify-between w-full max-w-md md:max-w-max p-1.5 rounded-2xl backdrop-blur-xl">
+            <button onClick={() => setActiveTab('home')} className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-[#eef1e7] text-[#23261f] rounded-xl sm:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform shadow-md shrink-0 overflow-hidden">
+              <img src={chinarLeaf} alt="Urban Vibes Interior" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'inline'; }} />
+              <span className="hidden text-base sm:text-xl">🍁</span>
+            </button>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button onClick={() => setActiveTab('catalog')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'catalog' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Products</button>
+              <button onClick={() => setActiveTab('labour')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'labour' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Fitting</button>
+              <button onClick={() => setActiveTab('downloads')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'downloads' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Catalogues</button>
             </div>
-            <button onClick={() => setToast(null)} className="ml-3 text-xs opacity-80 hover:opacity-100">✕</button>
-          </div>
-        )}
+          </nav>
+        </div>
+      )}
 
-        {/* SUCCESS CONFIRMATION MODAL POPUP */}
-        {bookingSuccessModal && (
-          <div className="fixed inset-0 bg-teal-950/80 backdrop-blur-md z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl space-y-4 border border-gray-100 relative">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 text-3xl rounded-full flex items-center justify-center mx-auto shadow-inner">
-                ✓
-              </div>
-              
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
-                  Booking Received
-                </span>
-                <h3 className="text-xl font-black text-teal-950 pt-2">
-                  Thank You, {bookingSuccessModal.name}!
-                </h3>
-                <p className="text-xs text-gray-600 leading-relaxed pt-1">
-                  Your measurement & fitting request for <strong className="text-teal-950">{bookingSuccessModal.location}</strong> has been logged.
-                </p>
-                <p className="text-xs font-bold text-emerald-700 bg-emerald-50/80 p-3 rounded-xl mt-3 border border-emerald-100">
-                  📞 Our team will reach out to you shortly to confirm your site visit.
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <button 
-                  onClick={() => setBookingSuccessModal(null)} 
-                  className="w-full bg-teal-950 hover:bg-teal-900 text-white font-bold py-3 rounded-2xl text-xs shadow-md transition"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CUSTOM CONFIRM DELETE MODAL */}
-        {deleteConfirm && (
-          <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4 border border-gray-100">
-              <div className="text-4xl">🗑️</div>
-              <h3 className="text-lg font-bold text-teal-950">Confirm Deletion</h3>
-              <p className="text-xs text-gray-500">
-                Are you sure you want to delete <strong className="text-gray-800">"{deleteConfirm.title}"</strong>? This action cannot be undone.
-              </p>
-              <div className="flex space-x-3 pt-2">
-                <button 
-                  onClick={() => setDeleteConfirm(null)} 
-                  className="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs transition"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={executeDelete} 
-                  className="w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition"
-                >
-                  Yes, Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CLEAN SINGLE-LINE TOP HEADER BAR */}
-        <div className="bg-teal-950 text-white text-[11px] md:text-xs py-2.5 px-4 border-b border-teal-900/60">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      {/* HOME TAB HERO (NEVER TAKES ANY LAYOUT HEIGHT WHEN ON OTHER TABS) */}
+      <main 
+        id="hero" 
+        className={`transition-opacity duration-300 ${
+          activeTab === 'home' && !isAdminLoggedIn 
+            ? 'relative w-full min-h-dvh flex items-center justify-center opacity-100 z-10 overflow-hidden' 
+            : 'fixed inset-0 pointer-events-none opacity-0 -z-10 h-0 overflow-hidden'
+        }`}
+      >
+        <canvas id="scene"></canvas>
+        
+        <div id="stage" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-28 sm:pt-36 pb-12 relative z-10 flex flex-col justify-between min-h-[82dvh]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 items-center">
             
-            {/* Left Side: Serving Location */}
-            <div className="flex items-center space-x-2 truncate">
-              <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 animate-pulse"></span>
-              <span className="font-bold text-amber-400 shrink-0 tracking-wide">Baramulla & Srinagar</span>
-              <span className="hidden lg:inline text-gray-300 font-normal truncate">• Premium Surfaces & Professional Fitting</span>
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left">
+              <div>
+                <span className="bg-[#eef1e7]/20 border border-[#a1b08b]/50 text-[#a1b08b] text-xs sm:text-xl lg:text-2xl font-black tracking-[0.25em] uppercase px-6 py-3 rounded-full backdrop-blur-md inline-block shadow-lg">
+                  URBAN VIBES INTERIOR
+                </span>
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-light tracking-tight text-white/90 leading-[1.18]">
+                Crafting Luxury <br />
+                <i className="not-italic text-[#a1b08b] font-normal">Living Spaces.</i>
+              </h1>
+
+              <div className="block lg:hidden pt-1">
+                <div className="sylva-dark-card p-4 sm:p-6 backdrop-blur-md bg-[#2b2e27]/80 border border-white/15 space-y-1.5">
+                  <span className="text-xs sm:text-sm text-[#a1b08b] font-extrabold uppercase tracking-wider block">
+                    URBAN VIBES INTERIOR DESIGN & DECOR
+                  </span>
+                  <p className="text-xs sm:text-sm text-white/90 font-light leading-relaxed">
+                    Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                <button onClick={() => setActiveTab('catalog')} className="sylva-card px-8 py-3.5 text-xs sm:text-sm font-bold tracking-widest uppercase hover:scale-105 transition-transform text-center shadow-lg">
+                  Explore Products
+                </button>
+                <button onClick={() => setShowBookingModal(true)} className="bg-white/10 backdrop-blur-md border border-white/20 text-[#eef1e7] px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-widest uppercase hover:bg-white/20 transition-colors text-center">
+                  📐 Book Technician Visit
+                </button>
+              </div>
             </div>
 
-            {/* Right Side: Phone & Admin Login */}
-            <div className="flex items-center space-x-4 md:space-x-6 shrink-0">
-              <a href={`tel:${businessPhone}`} className="hover:text-amber-400 font-bold transition flex items-center space-x-1.5 text-gray-200">
-                <span>📞</span> 
-                <span className="hidden sm:inline">+91 8491988890</span>
-                <span className="sm:hidden">Call</span>
-              </a>
-
-              <div className="h-3.5 w-px bg-teal-800"></div>
-
-              {isAdminLoggedIn ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-emerald-400 font-bold text-[10px] hidden sm:inline">🟢 Active</span>
-                  <button onClick={() => { setIsAdminLoggedIn(false); showToast('Logged out of Admin Portal.', 'success'); }} className="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-0.5 rounded text-[10px] font-bold transition shadow-xs">Log Out</button>
-                </div>
-              ) : (
-                <button onClick={() => setShowLoginModal(true)} className="text-amber-400 hover:text-amber-300 font-bold text-[11px] transition flex items-center space-x-1">
-                  <span>🔐</span> <span>Admin</span>
-                </button>
-              )}
+            <div className="hidden lg:block lg:col-span-5">
+              <div className="sylva-dark-card p-6 sm:p-8 md:p-10 backdrop-blur-md bg-[#2b2e27]/85 border border-white/15 space-y-3">
+                <span className="text-base sm:text-lg lg:text-xl text-[#a1b08b] font-extrabold uppercase tracking-wider block">
+                  URBAN VIBES INTERIOR DESIGN & DECOR
+                </span>
+                <p className="text-sm sm:text-base lg:text-lg text-white/95 font-light leading-relaxed">
+                  Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
+                </p>
+              </div>
             </div>
 
           </div>
         </div>
+      </main>
 
-        {/* Main Navigation Bar */}
-        <nav className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6 flex justify-between h-16 md:h-20 items-center">
-            
-            {/* BRAND LOGO WITH CHINAR LEAF ICON */}
-            <div onClick={() => navigateTab('home')} className="cursor-pointer flex items-center space-x-3 group">
-              <div className="relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                <img 
-                  src={chinarLeaf} 
-                  alt="Buhroo Interiors Chinar Leaf" 
-                  className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'block';
-                  }} 
-                />
-                <span className="hidden text-2xl text-amber-600 group-hover:scale-110 transition-transform">🍁</span>
-              </div>
-              <div>
-                <span className="text-xl md:text-2xl font-black tracking-tight text-teal-950 block leading-none">
-                  BUHROO <span className="text-amber-600">INTERIORS</span>
-                </span>
-                <span className="block text-[8px] md:text-[9.5px] tracking-[0.2em] uppercase font-bold text-gray-400 mt-1">
-                  Surfaces & Architectural Materials
-                </span>
-              </div>
+      {/* ADMIN PORTAL VIEW */}
+      {isAdminLoggedIn ? (
+        <section className="max-w-6xl mx-auto px-4 lg:px-8 pt-10 pb-20 space-y-8 z-10 relative">
+          
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#2b2e27] border border-white/10 p-5 rounded-3xl shadow-xl">
+            <div>
+              <span className="text-[10px] text-[#a1b08b] font-black uppercase tracking-widest">Admin Control Panel</span>
+              <h1 className="text-xl sm:text-2xl font-light text-white">Urban Vibes Interior Management</h1>
             </div>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-8 font-bold text-xs uppercase tracking-wider text-gray-600">
-              <button onClick={() => navigateTab('home')} className={`transition-all py-1 ${activeTab === 'home' && !isAdminLoggedIn ? 'text-teal-950 border-b-2 border-amber-500' : 'hover:text-teal-950'}`}>Home</button>
-              <button onClick={() => navigateTab('catalog')} className={`transition-all py-1 ${activeTab === 'catalog' && !isAdminLoggedIn ? 'text-teal-950 border-b-2 border-amber-500' : 'hover:text-teal-950'}`}>Product Showcase</button>
-              <button onClick={() => navigateTab('labour')} className={`transition-all py-1 ${activeTab === 'labour' && !isAdminLoggedIn ? 'text-teal-950 border-b-2 border-amber-500' : 'hover:text-teal-950'}`}>👷 On-Site Labour & Fitting</button>
-              <button onClick={() => navigateTab('downloads')} className={`transition-all py-1 ${activeTab === 'downloads' && !isAdminLoggedIn ? 'text-teal-950 border-b-2 border-amber-500' : 'hover:text-teal-950'}`}>📥 PDF Catalogues</button>
-            </div>
-
-            {/* Mobile Right Action Bar: WhatsApp + Hamburger Menu Toggle */}
-            <div className="flex items-center space-x-2.5">
-              <a 
-                href={`https://wa.me/${whatsappNumber}?text=Hello%20Buhroo%20Interiors,%20I%20am%20looking%20for%20materials/labour%20in%20Baramulla/Srinagar.`} 
-                target="_blank" 
-                rel="noreferrer"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center space-x-1.5 transition-all hover:scale-105 active:scale-95"
-              >
-                <span>💬</span>
-                <span className="hidden sm:inline">WhatsApp</span>
-              </a>
-
-              {/* Mobile Hamburger Menu Toggle Button */}
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
-                className="md:hidden text-teal-950 p-2 focus:outline-none text-2xl font-black"
-                aria-label="Toggle Navigation Menu"
-              >
-                {isMobileMenuOpen ? '✕' : '☰'}
-              </button>
-            </div>
+            <button onClick={() => setIsAdminLoggedIn(false)} className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-5 py-2.5 rounded-2xl shadow-md transition">
+              Exit Admin Mode ✕
+            </button>
           </div>
 
-          {/* MOBILE SLIDE-OUT MENU DRAWER */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3 space-y-2 shadow-2xl animate-in slide-in-from-top-2 duration-200">
-              <button 
-                onClick={() => navigateTab('home')} 
-                className={`block w-full text-left font-bold text-xs py-2.5 px-3 rounded-xl transition ${activeTab === 'home' ? 'bg-teal-950 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              >
-                🏠 Home
-              </button>
-              <button 
-                onClick={() => navigateTab('catalog')} 
-                className={`block w-full text-left font-bold text-xs py-2.5 px-3 rounded-xl transition ${activeTab === 'catalog' ? 'bg-teal-950 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              >
-                🛍️ Product Showcase
-              </button>
-              <button 
-                onClick={() => navigateTab('labour')} 
-                className={`block w-full text-left font-bold text-xs py-2.5 px-3 rounded-xl transition ${activeTab === 'labour' ? 'bg-teal-950 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              >
-                👷 On-Site Labour & Fitting
-              </button>
-              <button 
-                onClick={() => navigateTab('downloads')} 
-                className={`block w-full text-left font-bold text-xs py-2.5 px-3 rounded-lg transition ${activeTab === 'downloads' ? 'bg-teal-950 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-              >
-                📥 PDF Catalogues
-              </button>
-            </div>
-          )}
-        </nav>
+          <div className="sylva-dark-card p-5 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-light text-[#eef1e7] mb-1">Customer Bookings ({bookings.length})</h2>
+            <p className="text-xs text-white/50 mb-6">Real-time measurement and fitting requests submitted by customers.</p>
 
-        {/* CUSTOMER PROMPT MODAL FOR BOOKING TECHNICIAN VISIT */}
-        {showBookingModal && (
-          <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto pb-24 md:pb-6 border border-gray-100">
-              <button onClick={() => setShowBookingModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 text-lg transition">✕</button>
-              
-              <div className="flex items-center space-x-2 text-amber-600 font-black text-[10px] uppercase tracking-wider">
-                <span>📐 Booking Form</span>
-                <span>•</span>
-                <span>Baramulla and Srinagar</span>
+            {bookings.length === 0 ? (
+              <div className="text-center py-8 text-white/30 text-sm">No bookings received yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {bookings.map(book => (
+                  <div key={book.id} className="p-4 rounded-2xl bg-[#181c14] border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-white text-sm">{book.name}</span>
+                        <span className="bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full">{book.location}</span>
+                        <span className="bg-[#a1b08b]/20 text-[#a1b08b] text-[10px] px-2 py-0.5 rounded-full">{book.service_type}</span>
+                      </div>
+                      <p className="text-xs text-white/60">📞 Phone: <strong>{book.phone}</strong> | 🏠 Address: {book.address}</p>
+                      {book.notes && <p className="text-xs text-white/40 italic">Notes: {book.notes}</p>}
+                    </div>
+
+                    <div className="flex space-x-2 shrink-0">
+                      <a href={`https://wa.me/${book.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(book.name)},%20this%20is%20Urban%20Vibes%20Interior%20regarding%20your%20measurement%20request.`} target="_blank" rel="noreferrer" className="bg-emerald-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg">
+                        💬 WhatsApp
+                      </a>
+                      <button onClick={() => setDeleteConfirm({ type: 'booking', id: book.id, title: book.name })} className="bg-rose-600 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg">
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <h3 className="text-xl md:text-2xl font-black text-teal-950 mt-1">Book On-Site Measurement & Fitting</h3>
-              <p className="text-xs text-gray-500 mt-1 mb-5">Enter your details and location. We will confirm your visit!</p>
+            )}
+          </div>
 
-              <form onSubmit={handleBookingSubmit} className="space-y-3.5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Your Full Name</label>
-                    <input required type="text" placeholder="e.g. Tariq Ahmad" value={bookingForm.name} onChange={e => setBookingForm({...bookingForm, name: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Phone / WhatsApp Number</label>
-                    <input required type="tel" placeholder="+91 8491988890" value={bookingForm.phone} onChange={e => setBookingForm({...bookingForm, phone: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Select City / Region</label>
-                    <select value={bookingForm.location} onChange={e => setBookingForm({...bookingForm, location: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm bg-white font-semibold text-teal-950 focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-                      <option value="Srinagar">Srinagar</option>
-                      <option value="Baramulla">Baramulla</option>
-                      <option value="Sopore / Nearby">Sopore / Nearby</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Service Requested</label>
-                    <select value={bookingForm.serviceType} onChange={e => setBookingForm({...bookingForm, serviceType: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-                      <option value="On-Site Measurement Visit">On-Site Measurement Visit</option>
-                      <option value="Panelling Fitting Team">Panelling Fitting Team</option>
-                      <option value="Modular Kitchen Boxing">Modular Kitchen Boxing</option>
-                      <option value="Full Interior Work Quote">Full Interior Work Quote</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Specific Area / Street Address</label>
-                  <input required type="text" placeholder="e.g. Rajbagh Srinagar / Main Market Baramulla" value={bookingForm.address} onChange={e => setBookingForm({...bookingForm, address: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Additional Project Details / Room Dimensions (Optional)</label>
-                  <textarea rows="2" placeholder="e.g. 2 bedrooms wall paneling + 1 kitchen boxing..." value={bookingForm.notes} onChange={e => setBookingForm({...bookingForm, notes: e.target.value})} className="w-full border rounded-xl p-2.5 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"></textarea>
-                </div>
-
-                <button type="submit" disabled={submittingBooking} className="w-full bg-teal-950 hover:bg-teal-900 text-white font-bold py-3.5 rounded-2xl transition shadow-lg flex justify-center items-center space-x-2 text-xs md:text-sm">
-                  <span>{submittingBooking ? 'Submitting...' : '✉️ Confirm Booking & Send Notification'}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            
+            <div className="sylva-dark-card p-5 sm:p-8">
+              <h2 className="text-lg sm:text-xl font-medium text-[#eef1e7] mb-1">1. Add Showcase Product</h2>
+              <form onSubmit={handleAddProduct} className="space-y-3.5 mt-4">
+                <input required type="text" placeholder="Product Title" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]" />
+                <select value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]">
+                  {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input type="text" placeholder="Finish Type (Optional)" value={newProduct.finish} onChange={e => setNewProduct({...newProduct, finish: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]" />
+                <input type="text" placeholder="Image URL (https://...)" value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]" />
+                <textarea rows="2" placeholder="Description..." value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]"></textarea>
+                <button type="submit" disabled={uploadingProduct} className="sylva-card w-full text-[#23261f] font-bold text-xs py-3.5 rounded-xl tracking-widest uppercase hover:scale-[1.02] transition-transform">
+                  {uploadingProduct ? 'Saving...' : 'Save & Publish Product Card'}
                 </button>
               </form>
             </div>
-          </div>
-        )}
 
-        {/* ADMIN LOGIN MODAL */}
-        {showLoginModal && (
-          <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative border border-gray-100">
-              <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 transition">✕</button>
-              <h3 className="text-xl md:text-2xl font-black text-teal-950">Admin Access</h3>
-              <p className="text-xs text-gray-500 mt-1 mb-5">Enter credentials to manage products, catalogues, and customer bookings.</p>
-              
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Username</label>
-                  <input required type="text" placeholder="Enter username" value={loginCreds.username} onChange={e => setLoginCreds({...loginCreds, username: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
+            <div className="sylva-dark-card p-5 sm:p-8">
+              <h2 className="text-lg sm:text-xl font-medium text-[#eef1e7] mb-1">2. Upload PDF Catalogue</h2>
+              <form onSubmit={handleAddCatalogue} className="space-y-3.5 mt-4">
+                <input required type="text" placeholder="Catalogue Title" value={newCatalogue.title} onChange={e => setNewCatalogue({...newCatalogue, title: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]" />
+                <select value={newCatalogue.category} onChange={e => setNewCatalogue({...newCatalogue, category: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#a1b08b]">
+                  {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-white/50 block">Select PDF Document</label>
+                  <input required type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files[0])} className="w-full border border-white/10 rounded-xl p-2.5 text-xs text-white/70 bg-[#181c14]" />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Password</label>
-                  <input required type="password" placeholder="Enter password" value={loginCreds.password} onChange={e => setLoginCreds({...loginCreds, password: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                </div>
-                <button type="submit" className="w-full bg-teal-950 text-white font-bold py-3 rounded-xl hover:bg-teal-900 transition shadow-md text-xs md:text-sm">Log In</button>
+                <button type="submit" disabled={uploadingCatalogue} className="bg-amber-500 text-teal-950 w-full font-bold text-xs py-3.5 rounded-xl tracking-widest uppercase hover:scale-[1.02] transition-transform">
+                  {uploadingCatalogue ? 'Uploading PDF...' : 'Upload Catalogue to PDF Hub'}
+                </button>
               </form>
             </div>
+
           </div>
-        )}
 
-        {/* ADMIN PORTAL VIEW */}
-        {isAdminLoggedIn ? (
-          <section className="max-w-6xl mx-auto px-4 lg:px-6 py-8 md:py-12 space-y-8 md:space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             
-            {/* CUSTOMER BOOKINGS LIST FOR ADMIN */}
-            <div className="bg-white rounded-3xl p-5 md:p-8 border border-gray-100 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="text-xl md:text-2xl font-black text-teal-950">Received Customer Bookings ({bookings.length})</h2>
-                  <p className="text-xs text-gray-500">Real-time measurement and fitting requests submitted by customers.</p>
+            <div className="sylva-dark-card p-5 sm:p-8 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg sm:text-xl font-medium text-[#eef1e7]">Manage Products ({products.length})</h3>
                 </div>
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] md:text-xs font-black px-3 py-1 rounded-full shrink-0 uppercase tracking-wider">Live Feed</span>
-              </div>
+                <p className="text-xs text-white/50 mb-4">Search and delete active showcase items</p>
+                
+                <input
+                  type="text"
+                  placeholder="🔍 Search product by title..."
+                  value={adminProdSearch}
+                  onChange={(e) => setAdminProdSearch(e.target.value)}
+                  className="w-full bg-[#181c14] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mb-4 focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30"
+                />
 
-              {bookings.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">No bookings received yet.</div>
-              ) : (
-                <div className="space-y-4">
-                  {bookings.map(book => (
-                    <div key={book.id} className="p-4 border border-gray-100 rounded-2xl bg-slate-50/70 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xs">
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-extrabold text-teal-950 text-sm md:text-base">{book.name}</span>
-                          <span className="bg-amber-100 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">{book.location}</span>
-                          <span className="bg-teal-100 text-teal-900 text-[10px] font-bold px-2 py-0.5 rounded-full">{book.service_type}</span>
+                <div className="max-h-[420px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
+                  {filteredAdminProducts.length === 0 ? (
+                    <div className="text-center py-8 text-white/30 text-xs">No products match your search.</div>
+                  ) : (
+                    filteredAdminProducts.map(prod => (
+                      <div key={prod.id} className="flex justify-between items-center p-2.5 rounded-2xl bg-[#181c14] border border-white/5 hover:border-white/20 transition-all">
+                        <div className="flex items-center space-x-3 truncate pr-2">
+                          <img src={prod.image} alt={prod.name} className="w-10 h-10 object-cover rounded-xl bg-black/40 shrink-0" onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }} />
+                          <div className="truncate">
+                            <span className="font-medium text-white text-xs block truncate">{prod.name}</span>
+                            <span className="text-[9px] text-[#a1b08b] font-bold uppercase tracking-wider">{prod.category}</span>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-600">📞 Phone: <strong>{book.phone}</strong></p>
-                        <p className="text-xs text-gray-600">🏠 Address: {book.address}</p>
-                        {book.notes && <p className="text-xs text-gray-500 italic">📝 Notes: {book.notes}</p>}
-                      </div>
-
-                      <div className="flex space-x-2 self-end md:self-auto">
-                        <a href={`https://wa.me/${book.phone.replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(book.name)},%20this%20is%20Buhroo%20Interiors%20regarding%20your%20measurement%20request.`} target="_blank" rel="noreferrer" className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs">
-                          💬 Contact
-                        </a>
-                        <button onClick={() => setDeleteConfirm({ type: 'booking', id: book.id, title: book.name })} className="bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs">
+                        <button onClick={() => setDeleteConfirm({ type: 'product', id: prod.id, title: prod.name })} className="bg-rose-600/80 hover:bg-rose-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shrink-0 transition">
                           🗑️ Delete
                         </button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* FORM 1: ADD PRODUCT SHOWCASE CARD */}
-            <div className="bg-white rounded-3xl p-5 md:p-8 border border-gray-100 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-black text-teal-950 mb-1">1. Add New Showcase Product Card</h2>
-              <p className="text-xs text-gray-500 mb-6">Create cards displayed on the main Product Showcase page.</p>
-              
-              <form onSubmit={handleAddProduct} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Product Title</label>
-                    <input required type="text" placeholder="e.g. Premium Wardrobe Panel" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Category Section</label>
-                    <select value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-                      <option value="Laminated Wall Panels">Laminated Wall Panels</option>
-                      <option value="French Moulding">French Moulding</option>
-                      <option value="Kitchen boxing">Kitchen boxing</option>
-                      <option value="Wardrobe">Wardrobe</option>
-                      <option value="Pvc paneling">Pvc paneling</option>
-                      <option value="Wall paneling">Wall paneling</option>
-                      <option value="Laminate Flooring">Laminate Flooring</option>
-                      <option value="UV Marble Sheets">UV Marble Sheets</option>
-                      <option value="Louvers & Fluted Panels">Louvers & Fluted Panels</option>
-                      <option value="Luxury Wallpapers">Luxury Wallpapers</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Finish Type (Optional)</label>
-                    <input type="text" placeholder="e.g. High Glossy / Matte" value={newProduct.finish} onChange={e => setNewProduct({...newProduct, finish: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Image URL</label>
-                    <input type="text" placeholder="https://..." value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                </div>
-
-                <textarea rows="2" placeholder="Description..." value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"></textarea>
-
-                <button type="submit" disabled={uploadingProduct} className="w-full bg-teal-950 text-white font-bold py-3 rounded-xl hover:bg-teal-900 transition shadow-md text-xs md:text-sm">
-                  {uploadingProduct ? 'Saving Product...' : 'Save & Publish Product Card'}
-                </button>
-              </form>
-            </div>
-
-            {/* FORM 2: UPLOAD STANDALONE PDF CATALOGUE TO HUB */}
-            <div className="bg-white rounded-3xl p-5 md:p-8 border border-gray-100 shadow-sm">
-              <h2 className="text-xl md:text-2xl font-black text-teal-950 mb-1">2. Upload Standalone PDF Catalogue to Hub</h2>
-              <p className="text-xs text-gray-500 mb-6">Upload complete PDF catalogue documents directly into the "PDF Catalogues" page.</p>
-
-              <form onSubmit={handleAddCatalogue} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Catalogue Title</label>
-                    <input required type="text" placeholder="e.g. Full Kitchen & Wardrobe Guide 2026" value={newCatalogue.title} onChange={e => setNewCatalogue({...newCatalogue, title: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Category</label>
-                    <select value={newCatalogue.category} onChange={e => setNewCatalogue({...newCatalogue, category: e.target.value})} className="w-full border rounded-xl p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/50">
-                      <option value="Laminated Wall Panels">Laminated Wall Panels</option>
-                      <option value="French Moulding">French Moulding</option>
-                      <option value="Kitchen boxing">Kitchen boxing</option>
-                      <option value="Wardrobe">Wardrobe</option>
-                      <option value="Pvc paneling">Pvc paneling</option>
-                      <option value="Wall paneling">Wall paneling</option>
-                      <option value="Laminate Flooring">Laminate Flooring</option>
-                      <option value="UV Marble Sheets">UV Marble Sheets</option>
-                      <option value="Louvers & Fluted Panels">Louvers & Fluted Panels</option>
-                      <option value="Luxury Wallpapers">Luxury Wallpapers</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Select PDF File</label>
-                  <input required type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files[0])} className="w-full border rounded-xl p-2 text-xs bg-gray-50 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-600 file:text-white hover:file:bg-amber-700" />
-                </div>
-
-                <button type="submit" disabled={uploadingCatalogue} className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition shadow-md text-xs md:text-sm">
-                  {uploadingCatalogue ? 'Uploading PDF to Cloud Storage...' : 'Upload Catalogue to PDF Hub'}
-                </button>
-              </form>
-            </div>
-
-            {/* MANAGE ITEMS LISTS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-3xl p-5 md:p-6 border border-gray-100 shadow-sm">
-                <h3 className="text-base md:text-lg font-black text-teal-950 mb-4">Manage Showcase Products ({products.length})</h3>
-                <div className="space-y-3">
-                  {products.map(prod => (
-                    <div key={prod.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-slate-50/70">
-                      <div>
-                        <span className="font-bold text-gray-900 text-xs block">{prod.name}</span>
-                        <span className="text-[10px] text-amber-600 font-extrabold">{prod.category}</span>
-                      </div>
-                      <button onClick={() => setDeleteConfirm({ type: 'product', id: prod.id, title: prod.name })} className="bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs">🗑️ Delete</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl p-5 md:p-6 border border-gray-100 shadow-sm">
-                <h3 className="text-base md:text-lg font-black text-teal-950 mb-4">Manage PDF Hub Catalogues ({catalogues.length})</h3>
-                <div className="space-y-3">
-                  {catalogues.map(cat => (
-                    <div key={cat.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-slate-50/70">
-                      <div>
-                        <span className="font-bold text-gray-900 text-xs block">{cat.title}</span>
-                        <span className="text-[10px] text-gray-500 font-bold">{cat.category}</span>
-                      </div>
-                      <button onClick={() => setDeleteConfirm({ type: 'catalogue', id: cat.id, title: cat.title })} className="bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs">🗑️ Delete</button>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
 
-          </section>
-        ) : (
-          /* PUBLIC SITE VIEW */
-          <main>
-            {/* HERO BANNER */}
-            {activeTab === 'home' && (
-              <>
-                <section 
-                  className="relative bg-teal-950 text-white min-h-[75vh] md:min-h-[85vh] px-4 py-16 md:py-28 bg-cover bg-center flex items-center" 
-                  style={{ backgroundImage: `url(${heroBg})` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-teal-950/95 via-teal-950/85 to-teal-950/40"></div>
-                  <div className="max-w-7xl mx-auto relative z-10 w-full md:w-2/3">
-                    <span className="inline-block bg-amber-500 text-teal-950 text-[10px] md:text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-md">
-                      Available in Baramulla and Srinagar
-                    </span>
-                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight mt-4 leading-tight drop-shadow-sm">
-                      Premium Surfaces & Skilled Installation.
-                    </h1>
-                    <p className="mt-4 text-sm md:text-lg text-gray-200 font-light leading-relaxed max-w-xl">
-                      Transform your home or commercial space. We supply top-quality materials and offer professional fitting teams across Srinagar and Baramulla.
-                    </p>
-                    
-                    <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
-                      <button onClick={() => navigateTab('catalog')} className="bg-amber-500 hover:bg-amber-400 text-teal-950 font-black py-3.5 px-8 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 text-xs md:text-sm text-center">
-                        Explore Products
-                      </button>
-                      <button 
-                        onClick={() => setShowBookingModal(true)} 
-                        className="bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white font-bold py-3.5 px-8 rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 text-xs md:text-sm"
-                      >
-                        <span>📐 Book Technician Visit</span>
-                      </button>
-                    </div>
-                  </div>
-                </section>
-
-                {/* INTERACTIVE CARDS */}
-                <section className="max-w-7xl mx-auto px-4 lg:px-6 py-8 md:py-12">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    
-                    {/* CARD 1: LOCATION */}
-                    <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group">
-                      <div>
-                        <div className="text-3xl mb-3 group-hover:scale-110 transition-transform w-fit">📍</div>
-                        <h3 className="font-black text-teal-950 text-base md:text-lg">Active Location Coverage</h3>
-                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                          Prompt material delivery and site visits across all areas of Baramulla and Srinagar.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* CARD 2: EXPERT LABOUR */}
-                    <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group">
-                      <div>
-                        <div className="text-3xl mb-3 group-hover:scale-110 transition-transform w-fit">👷</div>
-                        <h3 className="font-black text-teal-950 text-base md:text-lg">Expert Labour & Fitting</h3>
-                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                          Experienced carpenters & wall panel installers for clean, precise, and fast execution.
-                        </p>
-                      </div>
-                      <button onClick={() => navigateTab('labour')} className="mt-4 text-xs font-extrabold text-amber-600 hover:text-amber-700 text-left transition">
-                        View fitting team details →
-                      </button>
-                    </div>
-
-                    {/* CARD 3: MEASUREMENT */}
-                    <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between border-l-4 border-l-amber-500 group">
-                      <div>
-                        <div className="text-3xl mb-3 group-hover:scale-110 transition-transform w-fit">📐</div>
-                        <h3 className="font-black text-teal-950 text-base md:text-lg">On-Site Measurement</h3>
-                        <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                          Book a technician to take exact measurements for Kitchen Boxing, Wardrobes, and Panelling.
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => setShowBookingModal(true)} 
-                        className="mt-4 bg-teal-950 text-white font-bold text-xs py-3 px-4 rounded-xl hover:bg-teal-900 transition text-center block shadow-md hover:scale-102"
-                      >
-                        Book Technician Visit
-                      </button>
-                    </div>
-
-                  </div>
-                </section>
-              </>
-            )}
-
-            {/* DEDICATED LABOUR & FITTING SECTION */}
-            {activeTab === 'labour' && (
-              <section className="max-w-5xl mx-auto px-4 lg:px-6 py-8 md:py-16">
-                <div className="text-center mb-8 md:mb-12">
-                  <span className="bg-amber-100 text-amber-900 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">On-Site Expertise</span>
-                  <h2 className="text-2xl md:text-3xl font-black text-teal-950 mt-3">Professional Labour & Installation Services</h2>
-                  <p className="text-xs md:text-sm text-gray-500 mt-2 max-w-xl mx-auto">
-                    We don't just sell surface materials—we provide trained local teams in Baramulla and Srinagar to complete your project flawlessly.
-                  </p>
+            <div className="sylva-dark-card p-5 sm:p-8 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg sm:text-xl font-medium text-[#eef1e7]">Manage Catalogues ({catalogues.length})</h3>
                 </div>
+                <p className="text-xs text-white/50 mb-4">Search and delete PDF catalogues from the hub</p>
+                
+                <input
+                  type="text"
+                  placeholder="🔍 Search catalogue by title..."
+                  value={adminCatSearch}
+                  onChange={(e) => setAdminCatSearch(e.target.value)}
+                  className="w-full bg-[#181c14] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white mb-4 focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30"
+                />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-12">
-                  <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-100 shadow-sm">
-                    <h3 className="text-lg md:text-xl font-black text-teal-950 mb-4">🛠️ Available Fitting Services</h3>
-                    <ul className="space-y-3 text-xs md:text-sm text-gray-700">
-                      <li className="flex items-center space-x-2.5">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">✓</span>
-                        <span>PVC & WPC Fluted Wall Paneling Installation</span>
-                      </li>
-                      <li className="flex items-center space-x-2.5">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">✓</span>
-                        <span>Modular Kitchen Boxing & Shutter Fitting</span>
-                      </li>
-                      <li className="flex items-center space-x-2.5">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">✓</span>
-                        <span>Wardrobe Framing & Laminated Surface Application</span>
-                      </li>
-                      <li className="flex items-center space-x-2.5">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">✓</span>
-                        <span>French Moulding Wainscoting & Border Framing</span>
-                      </li>
-                      <li className="flex items-center space-x-2.5">
-                        <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">✓</span>
-                        <span>Swiss Oak Laminate Flooring Laying</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <div className="bg-teal-950 text-white p-6 md:p-8 rounded-3xl shadow-lg flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-lg md:text-xl font-black text-amber-400 mb-2">Book Fitting Team</h3>
-                      <p className="text-xs text-gray-300 leading-relaxed">
-                        Need skilled workers at your site in Srinagar or Baramulla? Fill in our measurement form to schedule a site visit.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setShowBookingModal(true)}
-                      className="mt-6 w-full bg-amber-500 hover:bg-amber-400 text-teal-950 font-black py-3.5 text-center rounded-2xl text-xs md:text-sm transition shadow-md hover:scale-102"
-                    >
-                      📐 Book Technician Visit
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* DEDICATED PDF DOWNLOAD HUB */}
-            {activeTab === 'downloads' && (
-              <section className="max-w-5xl mx-auto px-4 lg:px-6 py-8 md:py-12">
-                <div className="text-center mb-6 md:mb-8">
-                  <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                    Downloads
-                  </span>
-                  <h2 className="text-2xl md:text-3xl font-black text-teal-950 mt-2">
-                    Product Catalogues
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Download PDF guides and specifications.
-                  </p>
-                </div>
-
-                {catalogues.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-8 text-center border border-gray-100 shadow-sm max-w-sm mx-auto">
-                    <div className="text-3xl mb-2">📄</div>
-                    <h3 className="font-bold text-gray-800 text-sm">No Catalogues Available</h3>
-                    <p className="text-[11px] text-gray-400 mt-1">Check back later or contact us on WhatsApp.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {catalogues.map((cat) => (
-                      <div 
-                        key={cat.id} 
-                        className="bg-white rounded-2xl border border-gray-100 p-4 md:p-5 shadow-sm hover:shadow-md transition flex items-center justify-between"
-                      >
-                        <div className="space-y-1">
-                          <span className="bg-amber-50 text-amber-800 text-[10px] font-bold uppercase px-2 py-0.5 rounded-md">
-                            {cat.category}
-                          </span>
-                          <h3 className="text-xs md:text-sm font-bold text-teal-950">
-                            {cat.title}
-                          </h3>
+                <div className="max-h-[420px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
+                  {filteredAdminCatalogues.length === 0 ? (
+                    <div className="text-center py-8 text-white/30 text-xs">No catalogues match your search.</div>
+                  ) : (
+                    filteredAdminCatalogues.map(cat => (
+                      <div key={cat.id} className="flex justify-between items-center p-3 rounded-2xl bg-[#181c14] border border-white/5 hover:border-white/20 transition-all">
+                        <div className="truncate pr-2">
+                          <span className="font-medium text-white text-xs block truncate">{cat.title}</span>
+                          <span className="text-[9px] text-[#a1b08b] font-bold uppercase tracking-wider">{cat.category}</span>
                         </div>
-
-                        <a 
-                          href={cat.file_url} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          download={cat.file_name || `${cat.title}.pdf`}
-                          className="bg-teal-950 hover:bg-amber-500 hover:text-teal-950 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center space-x-1.5 transition shrink-0 ml-3 shadow-xs"
-                        >
-                          <span>Download</span>
-                          <span>📥</span>
-                        </a>
+                        <button onClick={() => setDeleteConfirm({ type: 'catalogue', id: cat.id, title: cat.title })} className="bg-rose-600/80 hover:bg-rose-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl shrink-0 transition">
+                          🗑️ Delete
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* PRODUCT SHOWCASE SECTION */}
-            {activeTab !== 'downloads' && activeTab !== 'labour' && (
-              <section className="max-w-7xl mx-auto px-4 lg:px-6 py-8 md:py-12">
-                {/* Section Header */}
-                <div className="flex flex-row items-center justify-between pb-4 border-b border-gray-200/80 mb-6 gap-2">
-                  <div>
-                    <h2 className="text-xl md:text-3xl font-black text-teal-950 tracking-tight">
-                      Material Collections
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Filter by category to view products.
-                    </p>
-                  </div>
-
-                  <div className="text-xs font-bold text-gray-500 shrink-0 bg-gray-100 px-3 py-1.5 rounded-full">
-                    Total <span className="text-teal-950 font-black">{filteredProducts.length}</span> items
-                  </div>
+                    ))
+                  )}
                 </div>
+              </div>
+            </div>
 
-                {/* Styled Horizontal Scrolling Filter Chips */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-amber-500 scrollbar-track-transparent">
-                  {CATEGORIES.map((cat) => {
-                    const isSelected = selectedCategory === cat;
-                    const count = cat === 'All' ? products.length : products.filter(p => p.category === cat).length;
+          </div>
 
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`whitespace-nowrap px-4 py-2.5 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center space-x-2 shrink-0 border ${
-                          isSelected
-                            ? 'bg-teal-950 text-white border-teal-950 shadow-md'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400 hover:text-teal-950'
-                        }`}
-                      >
-                        <span>{cat}</span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-md font-black ${
-                            isSelected
-                              ? 'bg-amber-500 text-teal-950'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+        </section>
+      ) : (
+        /* PUBLIC SITE CONTENT (RENDERS DIRECTLY BELOW DOCK WITH ZERO LAYOUT GAP) */
+        <div className={`flex-grow pt-24 sm:pt-28 pb-20 z-10 relative ${activeTab === 'home' ? 'hidden' : ''}`}>
+          
+          {/* GROVE (PRODUCT SHOWCASE) */}
+          {activeTab === 'catalog' && (
+            <section className="max-w-7xl mx-auto px-4 lg:px-8 animate-in fade-in duration-500">
+              <div className="mb-6 border-b border-white/10 pb-4 flex justify-between items-end">
+                <div>
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-light text-[#eef1e7] tracking-tight">Material Collections</h2>
+                  <p className="text-xs sm:text-sm text-[#eef1e7]/50 mt-1 font-light">Explore PVC paneling, wall panels, laminate flooring, and wallpapers.</p>
                 </div>
+                <div className="text-[10px] sm:text-xs text-white/40 shrink-0">
+                  Total {filteredProducts.length} items (Page {currentPage} of {totalPages || 1})
+                </div>
+              </div>
 
-                {/* Product Cards Grid */}
-                {loading ? (
-                  <div className="text-center py-16 text-gray-400 font-semibold text-sm">
-                    Loading collections...
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mt-6">
-                    {filteredProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all duration-300 group hover:-translate-y-1"
-                      >
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6">
+                {CATEGORIES.map((cat) => (
+                  <button key={cat} onClick={() => handleCategoryChange(cat)}
+                    className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-xs font-medium tracking-wide transition-all ${
+                      selectedCategory === cat ? 'bg-[#eef1e7] text-[#23261f] shadow-lg' : 'bg-[#2b2e27] text-white/60 hover:bg-[#3f453a] hover:text-white'
+                    }`}
+                  >{cat}</button>
+                ))}
+              </div>
+
+              {loading ? (
+                <div className="text-center py-16 text-white/40 text-sm font-light">Loading materials...</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    {paginatedProducts.map(product => (
+                      <div key={product.id} className="sylva-dark-card overflow-hidden group hover:-translate-y-1 transition-transform duration-500 flex flex-col justify-between">
                         <div>
-                          <div className="relative h-56 sm:h-64 bg-gray-100 overflow-hidden">
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                            <span className="absolute top-3 left-3 bg-teal-950/90 backdrop-blur-sm text-white text-[10px] uppercase font-bold px-3 py-1 rounded-full tracking-wider shadow-sm">
-                              {product.category}
-                            </span>
+                          <div className="relative aspect-[4/3] overflow-hidden bg-[#181c14]">
+                            <img src={product.image} alt={product.name} onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#2b2e27] via-transparent to-transparent"></div>
+                            <span className="absolute top-2.5 left-2.5 bg-[#23261f]/90 backdrop-blur-md text-[#eef1e7] text-[9px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/10">{product.category}</span>
                           </div>
-
-                          <div className="p-5 md:p-6">
-                            <h3 className="text-base md:text-lg font-black text-teal-950 group-hover:text-amber-600 transition-colors uppercase tracking-tight">
-                              {product.name}
-                            </h3>
-                            <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
-                              {product.description}
-                            </p>
-
+                          <div className="p-4 sm:p-5">
+                            <h3 className="text-sm sm:text-base font-light text-[#eef1e7] tracking-tight mb-1 group-hover:text-[#a1b08b] transition-colors line-clamp-1">{product.name}</h3>
+                            <p className="text-xs text-white/50 leading-relaxed line-clamp-2">{product.description}</p>
                             {product.finish && (
-                              <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-gray-600 font-medium">
-                                <span className="bg-amber-50 border border-amber-200/60 text-amber-900 px-3 py-1 rounded-lg font-bold text-[10px] md:text-[11px]">
-                                  ✨ {product.finish}
-                                </span>
-                              </div>
+                              <span className="inline-block mt-2 bg-[#eef1e7]/10 text-[#eef1e7] px-2 py-0.5 rounded text-[9px] tracking-widest uppercase border border-white/5">✨ {product.finish}</span>
                             )}
                           </div>
                         </div>
-
-                        {/* Card Action Button */}
-                        <div className="p-5 md:p-6 pt-0">
-                          <button
-                            onClick={() => setActiveModalProduct(product)}
-                            className="w-full bg-teal-950 hover:bg-teal-900 text-white font-bold text-xs py-3 rounded-2xl text-center shadow-md transition-all duration-200 flex items-center justify-center space-x-2"
-                          >
-                            <span>🔍</span>
-                            <span>View Specifications</span>
+                        <div className="p-4 sm:p-5 pt-0 mt-auto">
+                          <button onClick={() => setActiveModalProduct(product)} className="w-full bg-[#383b34] border border-white/10 hover:border-[#a1b08b] hover:text-[#a1b08b] text-white/80 text-[11px] font-medium tracking-widest uppercase py-2.5 sm:py-3 rounded-xl transition-all">
+                            🔍 View Specifications
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </section>
-            )}
-          </main>
-        )}
 
-        {/* POPUP MODAL FOR PRODUCT DETAILS */}
-        {activeModalProduct && (
-          <div className="fixed inset-0 bg-teal-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full p-5 md:p-6 shadow-2xl relative border border-gray-100">
-              <button onClick={() => setActiveModalProduct(null)} className="absolute top-4 right-4 text-gray-400 hover:text-teal-950 transition">✕</button>
-              <h3 className="text-xl md:text-2xl font-black text-teal-950 mt-1">{activeModalProduct.name}</h3>
-              <img src={activeModalProduct.image} alt={activeModalProduct.name} onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }} className="w-full h-48 md:h-52 object-cover rounded-2xl mt-3 md:mt-4 shadow-sm" />
-              <p className="text-xs text-gray-600 mt-3 md:mt-4 leading-relaxed">{activeModalProduct.description}</p>
-              <div className="mt-5">
-                <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello Buhroo Interiors, I am interested in ${activeModalProduct.name}. Please share pricing.`)}`} target="_blank" rel="noreferrer" className="block w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl text-center shadow-md transition">
-                  Inquire on WhatsApp
-                </a>
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-8 pt-6 border-t border-white/10">
+                      <button
+                        disabled={currentPage === 1}
+                        onClick={() => {
+                          setCurrentPage(prev => Math.max(prev - 1, 1));
+                          scrollToTopGrid();
+                        }}
+                        className="px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-[#2b2e27] text-white/70 hover:bg-[#3f453a] hover:text-white disabled:opacity-30 border border-white/5 transition-all"
+                      >
+                        Prev
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => {
+                            setCurrentPage(page);
+                            scrollToTopGrid();
+                          }}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-xs font-bold transition-all ${
+                            currentPage === page
+                              ? 'bg-[#eef1e7] text-[#23261f] shadow-lg scale-105'
+                              : 'bg-[#2b2e27] text-white/60 hover:bg-[#3f453a] hover:text-white border border-white/5'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => {
+                          setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                          scrollToTopGrid();
+                        }}
+                        className="px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-[#2b2e27] text-white/70 hover:bg-[#3f453a] hover:text-white disabled:opacity-30 border border-white/5 transition-all"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+
+          {/* HABITATS (LABOUR & FITTING) */}
+          {activeTab === 'labour' && (
+            <section className="max-w-5xl mx-auto px-4 lg:px-8 animate-in fade-in duration-500">
+              <div className="text-center mb-10">
+                <h2 className="text-3xl sm:text-5xl font-light text-[#eef1e7] tracking-tight mb-2">Fitting & On-Site Expertise</h2>
+                <p className="text-xs sm:text-base text-white/50 font-light max-w-2xl mx-auto">We provide trained local fitting teams across Baramulla and Srinagar to execute your project flawlessly.</p>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                <div className="sylva-dark-card p-5 sm:p-10">
+                  <h3 className="text-lg sm:text-2xl font-light text-[#a1b08b] mb-4 sm:mb-6">🛠️ Available Fitting Services</h3>
+                  <ul className="space-y-3 text-white/70 font-light text-xs sm:text-sm">
+                    <li className="flex items-start space-x-2.5"><span className="text-[#a1b08b]">✓</span> <span>PVC & WPC Fluted Wall Paneling Installation</span></li>
+                    <li className="flex items-start space-x-2.5"><span className="text-[#a1b08b]">✓</span> <span>Modular Kitchen Boxing & Shutter Fitting</span></li>
+                    <li className="flex items-start space-x-2.5"><span className="text-[#a1b08b]">✓</span> <span>Wardrobe Framing & Laminated Surface Application</span></li>
+                    <li className="flex items-start space-x-2.5"><span className="text-[#a1b08b]">✓</span> <span>French Moulding Wainscoting & Border Framing</span></li>
+                    <li className="flex items-start space-x-2.5"><span className="text-[#a1b08b]">✓</span> <span>Swiss Oak Laminate Flooring Laying</span></li>
+                  </ul>
+                </div>
+                <div className="sylva-card p-5 sm:p-10 flex flex-col justify-center text-center">
+                  <h3 className="text-lg sm:text-2xl font-light text-[#23261f] mb-2">Book Fitting Team</h3>
+                  <p className="text-[#7c8177] text-xs sm:text-sm leading-relaxed mb-5">Need skilled workers at your site in Srinagar or Baramulla? Schedule a technician site visit now.</p>
+                  <button onClick={() => setShowBookingModal(true)} className="bg-[#23261f] text-[#eef1e7] py-3.5 px-8 rounded-full text-xs font-bold tracking-widest uppercase hover:scale-105 transition-transform shadow-xl mx-auto">
+                    📐 Book Technician Visit
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* JOURNAL (PDF CATALOGUES) */}
+          {activeTab === 'downloads' && (
+            <section className="max-w-5xl mx-auto px-4 lg:px-8 animate-in fade-in duration-500">
+              <div className="mb-6 border-b border-white/10 pb-4 flex justify-between items-end">
+                <div>
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-light text-[#eef1e7] tracking-tight">PDF Catalogues</h2>
+                  <p className="text-xs sm:text-sm text-[#eef1e7]/50 mt-1 font-light">Download architectural guides, PDF catalogues, and material specifications.</p>
+                </div>
+                <div className="text-[10px] sm:text-xs text-white/40 shrink-0">
+                  Total {catalogues.length} items (Page {catCurrentPage} of {catTotalPages || 1})
+                </div>
+              </div>
+
+              {catalogues.length === 0 ? (
+                <div className="sylva-dark-card p-12 text-center text-white/40 text-sm">No catalogues available right now.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {paginatedCatalogues.map(cat => (
+                      <div key={cat.id} className="sylva-dark-card p-4 sm:p-6 flex justify-between items-center hover:border-[#a1b08b] transition-colors gap-3">
+                        <div className="space-y-1 truncate">
+                          <span className="text-[#a1b08b] text-[9px] sm:text-[10px] uppercase tracking-widest block">{cat.category}</span>
+                          <h3 className="text-white text-xs sm:text-sm font-medium truncate">{cat.title}</h3>
+                        </div>
+                        <a href={cat.file_url} target="_blank" rel="noreferrer" download={cat.file_name || `${cat.title}.pdf`} className="bg-[#eef1e7] text-[#23261f] px-3.5 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:scale-105 transition-transform flex items-center space-x-1 shrink-0">
+                          <span>Get</span>
+                          <span>📥</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* PDF CATALOGUES PAGINATION CONTROLS */}
+                  {catTotalPages > 1 && (
+                    <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-8 pt-6 border-t border-white/10">
+                      <button
+                        disabled={catCurrentPage === 1}
+                        onClick={() => {
+                          setCatCurrentPage(prev => Math.max(prev - 1, 1));
+                          scrollToTopGrid();
+                        }}
+                        className="px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-[#2b2e27] text-white/70 hover:bg-[#3f453a] hover:text-white disabled:opacity-30 border border-white/5 transition-all"
+                      >
+                        Prev
+                      </button>
+
+                      {Array.from({ length: catTotalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => {
+                            setCatCurrentPage(page);
+                            scrollToTopGrid();
+                          }}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-xs font-bold transition-all ${
+                            catCurrentPage === page
+                              ? 'bg-[#eef1e7] text-[#23261f] shadow-lg scale-105'
+                              : 'bg-[#2b2e27] text-white/60 hover:bg-[#3f453a] hover:text-white border border-white/5'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        disabled={catCurrentPage === catTotalPages}
+                        onClick={() => {
+                          setCatCurrentPage(prev => Math.min(prev + 1, catTotalPages));
+                          scrollToTopGrid();
+                        }}
+                        className="px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider bg-[#2b2e27] text-white/70 hover:bg-[#3f453a] hover:text-white disabled:opacity-30 border border-white/5 transition-all"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {/* ADMIN LOGIN MODAL */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-[#181c14]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="sylva-dark-card max-w-md w-full p-6 sm:p-8 relative">
+            <button onClick={() => setShowLoginModal(false)} className="absolute top-4 right-5 text-white/40 hover:text-white text-xl">✕</button>
+            <h3 className="text-xl sm:text-2xl font-light text-[#eef1e7] mb-6">Admin Access</h3>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input required type="text" placeholder="Username" value={loginCreds.username} onChange={e => setLoginCreds({...loginCreds, username: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-[#a1b08b]" />
+              <input required type="password" placeholder="Password" value={loginCreds.password} onChange={e => setLoginCreds({...loginCreds, password: e.target.value})} className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-[#a1b08b]" />
+              <button type="submit" className="w-full sylva-card text-[#23261f] font-bold text-xs py-3.5 sm:py-4 rounded-full uppercase tracking-widest mt-2">Log In</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRODUCT SPECIFICATIONS MODAL */}
+      {activeModalProduct && (
+        <div className="fixed inset-0 bg-[#181c14]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="sylva-dark-card max-w-lg w-full p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setActiveModalProduct(null)} className="absolute top-4 right-5 text-white/40 hover:text-white text-xl">✕</button>
+            <h3 className="text-xl sm:text-2xl font-light text-[#eef1e7] mb-3 pr-6 tracking-tight">{activeModalProduct.name}</h3>
+            <img src={activeModalProduct.image} alt={activeModalProduct.name} onError={(e) => { e.target.src = PLACEHOLDER_IMAGE; }} className="w-full h-48 sm:h-56 object-cover rounded-2xl shadow-inner opacity-90" />
+            <p className="text-xs sm:text-sm text-white/60 mt-4 sm:mt-6 leading-relaxed font-light">{activeModalProduct.description}</p>
+            <div className="mt-6 sm:mt-8">
+              <a href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello Urban Vibes Interior, I am interested in ${activeModalProduct.name}. Please share pricing.`)}`} target="_blank" rel="noreferrer" 
+                 className="block w-full sylva-card text-center text-[#23261f] font-medium tracking-widest uppercase text-xs py-3.5 sm:py-4 rounded-full transition-transform hover:scale-105 shadow-xl">
+                Inquire on WhatsApp
+              </a>
             </div>
           </div>
-        )}
-
-        {/* MOBILE STICKY BOTTOM ACTION BAR */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 z-50 flex justify-around items-center py-2 px-3 shadow-lg">
-          <button onClick={() => setShowBookingModal(true)} className="flex flex-col items-center justify-center text-[11px] font-bold text-teal-950 active:scale-95 transition">
-            <span className="text-base leading-none mb-1">📐</span>
-            <span>Measure</span>
-          </button>
-          <button onClick={() => navigateTab('labour')} className="flex flex-col items-center justify-center text-[11px] font-bold text-amber-600 active:scale-95 transition">
-            <span className="text-base leading-none mb-1">👷</span>
-            <span>Fitting</span>
-          </button>
-          <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" className="flex flex-col items-center justify-center text-[11px] font-bold text-emerald-600 active:scale-95 transition">
-            <span className="text-base leading-none mb-1">💬</span>
-            <span>WhatsApp</span>
-          </a>
         </div>
-      </div>
+      )}
+
+      {/* BOOK TECHNICIAN VISIT MODAL */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-[#181c14]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="sylva-dark-card max-w-lg w-full p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setShowBookingModal(false)} className="absolute top-4 right-5 text-white/40 hover:text-white text-xl">✕</button>
+            <h3 className="text-xl sm:text-2xl font-light text-[#eef1e7] mb-1">Book Technician Visit</h3>
+            <p className="text-xs text-white/50 mb-5">Enter your details for on-site measurement & fitting in Srinagar or Baramulla.</p>
+            
+            <form onSubmit={handleBookingSubmit} className="space-y-3.5">
+              <input required type="text" placeholder="Your Full Name" value={bookingForm.name} onChange={e => setBookingForm({...bookingForm, name: e.target.value})} 
+                className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30" />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <input required type="tel" placeholder="Phone Number" value={bookingForm.phone} onChange={e => setBookingForm({...bookingForm, phone: e.target.value})} 
+                  className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30" />
+                <select value={bookingForm.location} onChange={e => setBookingForm({...bookingForm, location: e.target.value})} 
+                  className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b]">
+                  <option value="Srinagar">Srinagar</option>
+                  <option value="Baramulla">Baramulla</option>
+                  <option value="Sopore / Nearby">Sopore / Nearby</option>
+                </select>
+              </div>
+
+              <div>
+                <select value={bookingForm.serviceType} onChange={e => setBookingForm({...bookingForm, serviceType: e.target.value})} 
+                  className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b]">
+                  <option value="On-Site Measurement Visit">On-Site Measurement Visit</option>
+                  <option value="Panelling Fitting Team">Panelling Fitting Team</option>
+                  <option value="Modular Kitchen Boxing">Modular Kitchen Boxing</option>
+                  <option value="Full Interior Work Quote">Full Interior Work Quote</option>
+                </select>
+              </div>
+
+              <input required type="text" placeholder="Specific Area / Street Address" value={bookingForm.address} onChange={e => setBookingForm({...bookingForm, address: e.target.value})} 
+                className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30" />
+
+              <textarea rows="2" placeholder="Project details or dimensions (Optional)..." value={bookingForm.notes} onChange={e => setBookingForm({...bookingForm, notes: e.target.value})} 
+                className="w-full bg-[#181c14] border border-white/10 rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#a1b08b] placeholder:text-white/30"></textarea>
+              
+              <button type="submit" disabled={submittingBooking} className="w-full sylva-card text-[#23261f] font-bold tracking-widest uppercase text-xs py-3.5 rounded-full hover:scale-105 transition-transform mt-2">
+                {submittingBooking ? 'Submitting...' : '✉️ Confirm Booking & Send Notice'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* BOOKING SUCCESS MODAL */}
+      {bookingSuccessModal && (
+        <div className="fixed inset-0 bg-[#181c14]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="sylva-dark-card max-w-sm w-full p-6 sm:p-8 text-center">
+            <div className="w-14 h-16 sm:w-16 sm:h-16 bg-[#eef1e7] text-[#4a4d44] text-2xl sm:text-3xl rounded-2xl flex items-center justify-center mx-auto mb-5">✓</div>
+            <h3 className="text-xl sm:text-2xl font-light text-[#eef1e7] mb-2">Thank You, {bookingSuccessModal.name}!</h3>
+            <p className="text-white/50 text-xs sm:text-sm font-light mb-6">Your request for {bookingSuccessModal.location} is logged. Our team will reach out to you shortly.</p>
+            <button onClick={() => setBookingSuccessModal(null)} className="w-full bg-[#383b34] border border-white/10 text-white/80 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-white/10">Done</button>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-[#181c14]/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="sylva-dark-card max-w-sm w-full p-6 text-center space-y-4">
+            <div className="text-3xl">🗑️</div>
+            <h3 className="text-lg font-light text-white">Confirm Deletion</h3>
+            <p className="text-xs text-white/50">Are you sure you want to delete "{deleteConfirm.title}"?</p>
+            <div className="flex space-x-3 pt-2">
+              <button onClick={() => setDeleteConfirm(null)} className="w-1/2 bg-white/10 text-white font-bold py-2.5 rounded-xl text-xs">Cancel</button>
+              <button onClick={executeDelete} className="w-1/2 bg-rose-600 text-white font-bold py-2.5 rounded-xl text-xs">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INLINE FOOTER WITH KASHMIRI PROVERB */}
+      <footer className="bg-[#2b2e27] border-t border-white/5 py-10 sm:py-12 px-6 mt-12 sm:mt-16 text-center text-white/50 text-xs z-50">
+        <div className="max-w-3xl mx-auto space-y-2.5">
+          <p className="text-lg sm:text-2xl font-serif text-[#a1b08b] font-light" dir="rtl">
+            مِحنَت چُھ بَرَكَتُك مُول، تہِ رِزِق چُھ خُداے دِوان
+          </p>
+          <p className="italic text-white/70 font-light text-xs sm:text-sm">
+            "Mehnat chuh barkatuk mool, te riziq chuh Khuday diwan."
+          </p>
+          <p className="text-[9px] sm:text-[10px] tracking-widest uppercase text-white/40 pt-1">
+            Hard work is the root of blessing, and Allah is the Provider of sustenance.
+          </p>
+        </div>
+        <div className="mt-6 sm:mt-8 pt-5 border-t border-white/5 text-[10px] sm:text-[11px] text-white/30">
+          © {new Date().getFullYear()} Urban Vibes Interior Design & Decor. All rights reserved. Crafted with passion in Kashmir 🏔️
+        </div>
+      </footer>
 
     </div>
   );
 }
-
-export default App;
