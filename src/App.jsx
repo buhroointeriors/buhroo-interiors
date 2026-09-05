@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
 import chinarLeaf from '/chinar-leaf.png';
+import mapImg from '/map.png';
 
 const CATEGORIES = [
   'All', 
@@ -272,7 +273,7 @@ export default function App() {
       {/* CUSTOM STYLES */}
       <style>{`
         .sylva-dock {
-          background: rgba(34, 40, 31, 0.92);
+          background: rgba(34, 40, 31, 0.94);
           box-shadow: 0 10px 30px rgba(10, 14, 8, 0.50), inset 0 1px rgba(255, 255, 255, 0.10);
           border: 1px solid rgba(255, 255, 255, 0.14);
         }
@@ -280,13 +281,13 @@ export default function App() {
         .sylva-card {
           background: #f2f3ef; color: #23261f;
           box-shadow: 0 20px 50px rgba(16, 21, 13, 0.35);
-          border-radius: 28px;
+          border-radius: 24px;
         }
 
         .sylva-dark-card {
           background: rgba(43, 46, 39, 0.85);
           border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 24px;
+          border-radius: 20px;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
 
@@ -318,79 +319,88 @@ export default function App() {
         </div>
       </div>
 
-      {/* PUBLIC FLOATING DOCK */}
+      {/* PUBLIC FLOATING DOCK (MOBILE OPTIMIZED) */}
       {!isAdminLoggedIn && (
-        <div className="fixed top-10 sm:top-12 left-0 right-0 z-50 flex justify-center pointer-events-none px-2">
-          <nav className="sylva-dock pointer-events-auto flex items-center justify-between w-full max-w-md md:max-w-max p-1.5 rounded-2xl backdrop-blur-xl">
+        <div className="fixed top-9 sm:top-12 left-0 right-0 z-50 flex justify-center pointer-events-none px-3">
+          <nav className="sylva-dock pointer-events-auto flex items-center justify-between w-full max-w-sm sm:max-w-md md:max-w-max p-1 sm:p-1.5 rounded-2xl backdrop-blur-xl">
             <button onClick={() => setActiveTab('home')} className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 bg-[#eef1e7] text-[#23261f] rounded-xl sm:rounded-2xl flex items-center justify-center hover:scale-105 transition-transform shadow-md shrink-0 overflow-hidden">
-              <img src={chinarLeaf} alt="Urban Vibes Interior" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'inline'; }} />
+              <img src={chinarLeaf} alt="Urban Vibes Interior" className="w-4 h-4 sm:w-6 sm:h-6 object-contain" onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'inline'; }} />
               <span className="hidden text-base sm:text-xl">🍁</span>
             </button>
             <div className="flex items-center gap-1 sm:gap-2">
-              <button onClick={() => setActiveTab('catalog')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'catalog' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Products</button>
-              <button onClick={() => setActiveTab('labour')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'labour' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Fitting</button>
-              <button onClick={() => setActiveTab('downloads')} className={`px-2.5 sm:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'downloads' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Catalogues</button>
+              <button onClick={() => setActiveTab('catalog')} className={`px-2 sm:px-4 md:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'catalog' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Products</button>
+              <button onClick={() => setActiveTab('labour')} className={`px-2 sm:px-4 md:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'labour' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Fitting</button>
+              <button onClick={() => setActiveTab('downloads')} className={`px-2 sm:px-4 md:px-5 h-8 sm:h-10 md:h-12 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs md:text-sm font-bold tracking-wider uppercase transition-all duration-300 shrink-0 ${activeTab === 'downloads' ? 'bg-[#f2f3ef] text-[#23261f] shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/5'}`}>Catalogues</button>
             </div>
           </nav>
         </div>
       )}
 
-      {/* HOME TAB HERO (STATIC LUXURY BACKGROUND IMAGE - ZERO LAG / ZERO CRASHES) */}
+      {/* HOME TAB HERO & MAP (PERFECT MOBILE ALIGNMENT) */}
       {activeTab === 'home' && !isAdminLoggedIn && (
-        <main className="relative w-full min-h-[90vh] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}>
+        <main className="relative w-full flex flex-col items-center">
           
-          {/* Dark Overlay Vignette for Crisp Contrast */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#181c14] via-[#181c14]/75 to-[#181c14]/60 backdrop-blur-[2px]"></div>
+          {/* HERO BANNER SECTION */}
+          <section className="relative w-full min-h-[75vh] sm:min-h-[85vh] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}>
+            
+            {/* Dark Overlay Vignette for Crisp Contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#23261f] via-[#181c14]/80 to-[#181c14]/65 backdrop-blur-[2px]"></div>
 
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-28 sm:pt-36 pb-16 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
-              
-              <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-20 sm:pt-32 pb-8 sm:pb-16 relative z-10">
+              <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6">
+                
                 <div>
-                  <span className="bg-[#eef1e7]/20 border border-[#a1b08b]/50 text-[#a1b08b] text-xs sm:text-xl lg:text-2xl font-black tracking-[0.25em] uppercase px-6 py-3 rounded-full backdrop-blur-md inline-block shadow-lg">
+                  <span className="bg-[#eef1e7]/20 border border-[#a1b08b]/50 text-[#a1b08b] text-[10px] sm:text-lg lg:text-xl font-black tracking-[0.2em] uppercase px-4 py-2 sm:px-6 sm:py-2.5 rounded-full backdrop-blur-md inline-block shadow-lg">
                     URBAN VIBES INTERIOR
                   </span>
                 </div>
 
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.15]">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.18] max-w-3xl">
                   Crafting Luxury <br />
                   <i className="not-italic text-[#a1b08b] font-normal">Living Spaces.</i>
                 </h1>
 
-                <div className="block lg:hidden pt-1">
-                  <div className="sylva-dark-card p-4 sm:p-6 backdrop-blur-md space-y-1.5">
-                    <span className="text-xs sm:text-sm text-[#a1b08b] font-extrabold uppercase tracking-wider block">
-                      URBAN VIBES INTERIOR DESIGN & DECOR
-                    </span>
-                    <p className="text-xs sm:text-sm text-white/90 font-light leading-relaxed">
-                      Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
-                    </p>
-                  </div>
-                </div>
+                <p className="max-w-xl text-white/80 text-xs sm:text-base font-light leading-relaxed px-2">
+                  Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
+                </p>
 
-                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                  <button onClick={() => setActiveTab('catalog')} className="sylva-card px-8 py-3.5 text-xs sm:text-sm font-bold tracking-widest uppercase hover:scale-105 transition-transform text-center shadow-lg">
+                <div className="pt-2 w-full max-w-sm sm:max-w-none sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-4">
+                  <button onClick={() => setActiveTab('catalog')} className="sylva-card w-full sm:w-auto px-8 py-3.5 text-xs sm:text-sm font-bold tracking-widest uppercase hover:scale-105 transition-transform text-center shadow-lg">
                     Explore Products
                   </button>
-                  <button onClick={() => setShowBookingModal(true)} className="bg-white/10 backdrop-blur-md border border-white/20 text-[#eef1e7] px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-widest uppercase hover:bg-white/20 transition-colors text-center">
+                  <button onClick={() => setShowBookingModal(true)} className="bg-white/10 backdrop-blur-md border border-white/20 text-[#eef1e7] w-full sm:w-auto px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-widest uppercase hover:bg-white/20 transition-colors text-center">
                     📐 Book Technician Visit
                   </button>
                 </div>
-              </div>
 
-              <div className="hidden lg:block lg:col-span-5">
-                <div className="sylva-dark-card p-6 sm:p-8 md:p-10 backdrop-blur-md space-y-3">
-                  <span className="text-base sm:text-lg lg:text-xl text-[#a1b08b] font-extrabold uppercase tracking-wider block">
-                    URBAN VIBES INTERIOR DESIGN & DECOR
+              </div>
+            </div>
+          </section>
+
+          {/* ELEGANT & BALANCED MAP SHOWCASE SECTION */}
+          <section className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 z-10 relative flex flex-col items-center">
+            <div className="w-full relative group overflow-hidden rounded-2xl sm:rounded-[32px] border border-white/15 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.75)] bg-[#181c14] sylva-dark-card p-2 sm:p-3.5">
+              <div className="relative w-full overflow-hidden rounded-xl sm:rounded-[24px] aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9]">
+                <img 
+                  src={mapImg} 
+                  alt="Baramulla Map - Urban Vibes Interior Service Hub" 
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out filter brightness-95 contrast-105"
+                />
+                
+                {/* Vignette Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#181c14]/80 via-transparent to-[#181c14]/20 pointer-events-none"></div>
+
+                {/* Centered Top Badge */}
+                <div className="absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-10 w-max">
+                  <span className="inline-flex items-center gap-1.5 uppercase tracking-[0.18em] text-[#a1b08b] font-black text-[9px] sm:text-xs bg-[#181c14]/90 px-3.5 py-1.5 sm:px-5 sm:py-2 rounded-full backdrop-blur-md border border-[#a1b08b]/40 shadow-2xl">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#a1b08b] animate-pulse"></span>
+                    BARAMULLA SERVICE HUB
                   </span>
-                  <p className="text-sm sm:text-base lg:text-lg text-white/95 font-light leading-relaxed">
-                    Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
-                  </p>
                 </div>
               </div>
-
             </div>
-          </div>
+          </section>
+
         </main>
       )}
 
