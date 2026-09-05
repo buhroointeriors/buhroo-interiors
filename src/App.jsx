@@ -20,6 +20,8 @@ const CATEGORIES = [
 
 const ITEMS_PER_PAGE = 8;
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&auto=format&fit=crop&q=80';
+// Premium Static Architectural Interior Background
+const HERO_BACKGROUND_IMAGE = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&auto=format&fit=crop&q=80';
 
 const formatImageUrl = (url) => {
   if (!url) return PLACEHOLDER_IMAGE;
@@ -98,7 +100,6 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
-    document.body.classList.add('js', 'is-ready', 'intro-done');
   }, []);
 
   const handleLogin = (e) => {
@@ -262,31 +263,32 @@ export default function App() {
   };
 
   const scrollToTopGrid = () => {
-    window.scrollTo({ top: 120, behavior: 'smooth' });
+    window.scrollTo({ top: 100, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#23261f] via-[#383b34] to-[#23261f] font-['Lexend',sans-serif] text-white selection:bg-[#eef1e7] selection:text-[#23261f] overflow-x-hidden flex flex-col justify-between relative">
+    <div className="min-h-screen bg-[#23261f] font-['Lexend',sans-serif] text-white selection:bg-[#eef1e7] selection:text-[#23261f] overflow-x-hidden flex flex-col justify-between relative">
       
-      {/* GLOBAL STYLES */}
+      {/* CUSTOM STYLES */}
       <style>{`
         .sylva-dock {
-          background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 42%), rgba(34,40,31,.92);
-          box-shadow: 0 10px 30px rgba(10,14,8,.50), inset 0 1px rgba(255,255,255,.10);
-          border: 1px solid rgba(255,255,255,.14);
+          background: rgba(34, 40, 31, 0.92);
+          box-shadow: 0 10px 30px rgba(10, 14, 8, 0.50), inset 0 1px rgba(255, 255, 255, 0.10);
+          border: 1px solid rgba(255, 255, 255, 0.14);
         }
         
         .sylva-card {
           background: #f2f3ef; color: #23261f;
-          box-shadow: 0 20px 50px rgba(16,21,13,.35);
+          box-shadow: 0 20px 50px rgba(16, 21, 13, 0.35);
           border-radius: 28px;
         }
-        .sylva-dark-card {
-          background: #2b2e27; border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
 
-        #scene { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; }
+        .sylva-dark-card {
+          background: rgba(43, 46, 39, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 24px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
 
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 8px; }
@@ -333,67 +335,64 @@ export default function App() {
         </div>
       )}
 
-      {/* HOME TAB HERO (NEVER TAKES ANY LAYOUT HEIGHT WHEN ON OTHER TABS) */}
-      <main 
-        id="hero" 
-        className={`transition-opacity duration-300 ${
-          activeTab === 'home' && !isAdminLoggedIn 
-            ? 'relative w-full min-h-dvh flex items-center justify-center opacity-100 z-10 overflow-hidden' 
-            : 'fixed inset-0 pointer-events-none opacity-0 -z-10 h-0 overflow-hidden'
-        }`}
-      >
-        <canvas id="scene"></canvas>
-        
-        <div id="stage" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-28 sm:pt-36 pb-12 relative z-10 flex flex-col justify-between min-h-[82dvh]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-12 items-center">
-            
-            <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left">
-              <div>
-                <span className="bg-[#eef1e7]/20 border border-[#a1b08b]/50 text-[#a1b08b] text-xs sm:text-xl lg:text-2xl font-black tracking-[0.25em] uppercase px-6 py-3 rounded-full backdrop-blur-md inline-block shadow-lg">
-                  URBAN VIBES INTERIOR
-                </span>
+      {/* HOME TAB HERO (STATIC LUXURY BACKGROUND IMAGE - ZERO LAG / ZERO CRASHES) */}
+      {activeTab === 'home' && !isAdminLoggedIn && (
+        <main className="relative w-full min-h-[90vh] flex items-center justify-center bg-cover bg-center" style={{ backgroundImage: `url(${HERO_BACKGROUND_IMAGE})` }}>
+          
+          {/* Dark Overlay Vignette for Crisp Contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#181c14] via-[#181c14]/75 to-[#181c14]/60 backdrop-blur-[2px]"></div>
+
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-28 sm:pt-36 pb-16 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
+              
+              <div className="lg:col-span-7 space-y-4 sm:space-y-6 text-left">
+                <div>
+                  <span className="bg-[#eef1e7]/20 border border-[#a1b08b]/50 text-[#a1b08b] text-xs sm:text-xl lg:text-2xl font-black tracking-[0.25em] uppercase px-6 py-3 rounded-full backdrop-blur-md inline-block shadow-lg">
+                    URBAN VIBES INTERIOR
+                  </span>
+                </div>
+
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light tracking-tight text-white leading-[1.15]">
+                  Crafting Luxury <br />
+                  <i className="not-italic text-[#a1b08b] font-normal">Living Spaces.</i>
+                </h1>
+
+                <div className="block lg:hidden pt-1">
+                  <div className="sylva-dark-card p-4 sm:p-6 backdrop-blur-md space-y-1.5">
+                    <span className="text-xs sm:text-sm text-[#a1b08b] font-extrabold uppercase tracking-wider block">
+                      URBAN VIBES INTERIOR DESIGN & DECOR
+                    </span>
+                    <p className="text-xs sm:text-sm text-white/90 font-light leading-relaxed">
+                      Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                  <button onClick={() => setActiveTab('catalog')} className="sylva-card px-8 py-3.5 text-xs sm:text-sm font-bold tracking-widest uppercase hover:scale-105 transition-transform text-center shadow-lg">
+                    Explore Products
+                  </button>
+                  <button onClick={() => setShowBookingModal(true)} className="bg-white/10 backdrop-blur-md border border-white/20 text-[#eef1e7] px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-widest uppercase hover:bg-white/20 transition-colors text-center">
+                    📐 Book Technician Visit
+                  </button>
+                </div>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-light tracking-tight text-white/90 leading-[1.18]">
-                Crafting Luxury <br />
-                <i className="not-italic text-[#a1b08b] font-normal">Living Spaces.</i>
-              </h1>
-
-              <div className="block lg:hidden pt-1">
-                <div className="sylva-dark-card p-4 sm:p-6 backdrop-blur-md bg-[#2b2e27]/80 border border-white/15 space-y-1.5">
-                  <span className="text-xs sm:text-sm text-[#a1b08b] font-extrabold uppercase tracking-wider block">
+              <div className="hidden lg:block lg:col-span-5">
+                <div className="sylva-dark-card p-6 sm:p-8 md:p-10 backdrop-blur-md space-y-3">
+                  <span className="text-base sm:text-lg lg:text-xl text-[#a1b08b] font-extrabold uppercase tracking-wider block">
                     URBAN VIBES INTERIOR DESIGN & DECOR
                   </span>
-                  <p className="text-xs sm:text-sm text-white/90 font-light leading-relaxed">
+                  <p className="text-sm sm:text-base lg:text-lg text-white/95 font-light leading-relaxed">
                     Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                <button onClick={() => setActiveTab('catalog')} className="sylva-card px-8 py-3.5 text-xs sm:text-sm font-bold tracking-widest uppercase hover:scale-105 transition-transform text-center shadow-lg">
-                  Explore Products
-                </button>
-                <button onClick={() => setShowBookingModal(true)} className="bg-white/10 backdrop-blur-md border border-white/20 text-[#eef1e7] px-8 py-3.5 rounded-full text-xs sm:text-sm font-bold tracking-widest uppercase hover:bg-white/20 transition-colors text-center">
-                  📐 Book Technician Visit
-                </button>
-              </div>
             </div>
-
-            <div className="hidden lg:block lg:col-span-5">
-              <div className="sylva-dark-card p-6 sm:p-8 md:p-10 backdrop-blur-md bg-[#2b2e27]/85 border border-white/15 space-y-3">
-                <span className="text-base sm:text-lg lg:text-xl text-[#a1b08b] font-extrabold uppercase tracking-wider block">
-                  URBAN VIBES INTERIOR DESIGN & DECOR
-                </span>
-                <p className="text-sm sm:text-base lg:text-lg text-white/95 font-light leading-relaxed">
-                  Bespoke surface finishes, architectural panelling, and master craftsmanship — tailored and fitted across Srinagar and Baramulla.
-                </p>
-              </div>
-            </div>
-
           </div>
-        </div>
-      </main>
+        </main>
+      )}
 
       {/* ADMIN PORTAL VIEW */}
       {isAdminLoggedIn ? (
@@ -559,7 +558,7 @@ export default function App() {
 
         </section>
       ) : (
-        /* PUBLIC SITE CONTENT (RENDERS DIRECTLY BELOW DOCK WITH ZERO LAYOUT GAP) */
+        /* PUBLIC SITE CONTENT */
         <div className={`flex-grow pt-24 sm:pt-28 pb-20 z-10 relative ${activeTab === 'home' ? 'hidden' : ''}`}>
           
           {/* GROVE (PRODUCT SHOWCASE) */}
@@ -723,7 +722,6 @@ export default function App() {
                     ))}
                   </div>
 
-                  {/* PDF CATALOGUES PAGINATION CONTROLS */}
                   {catTotalPages > 1 && (
                     <div className="flex justify-center items-center gap-1.5 sm:gap-2 mt-8 pt-6 border-t border-white/10">
                       <button
